@@ -80,6 +80,18 @@ Dự án được cấu hình sẵn **GitHub Actions CI/CD** chạy trên máy c
    - Biên dịch với cờ `CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO`
    - Đóng gói file `.ipa` và tạo **GitHub Release** có link tải trực tiếp 1-click.
 
-3. **Cài đặt vào iPhone thật (Không cần tài khoản $99):**
-   - **TrollStore** (nếu máy có hỗ trợ TrollStore): Cài vĩnh viễn không cần ký lại.
-   - **Sideloadly / AltStore / Scarlet / ESign**: Nạp trực tiếp qua máy tính hoặc chứng chỉ cá nhân miễn phí.
+---
+
+## 📲 Tải Về Trực Tiếp & Cài Đặt File `.ipa`
+
+File `.ipa` đã được biên dịch thành công chuẩn kiến trúc **ARM64 Physical Device** (không bị văng app trên iPhone thật):
+
+- 📦 **Tệp tin cục bộ trên máy tính:** [GhostTouch-ZeroTrace.ipa](file:///c:/Users/ad/Documents/GhostTouch_iOS/GhostTouch-ZeroTrace.ipa) (`5.5 MB`)
+- 🌐 **Link tải trực tiếp GitHub Release:** [Tải GhostTouch-ZeroTrace.ipa (v1.0.2)](https://github.com/Bundev-Coder/GhostTouch-iOS/releases/download/v1.0.2/GhostTouch-ZeroTrace.ipa)
+- 📌 **Trang phát hành chính thức:** [GhostTouch iOS Releases](https://github.com/Bundev-Coder/GhostTouch-iOS/releases)
+
+### Các hình thức cài đặt:
+1. **TrollStore** (iOS 14.0 - 17.0 tùy dòng máy): Cài đặt vĩnh viễn không bao giờ bị thu hồi chứng chỉ.
+2. **Sideloadly / AltStore**: Cắm cáp kết nối iPhone với máy tính, kéo thả file `.ipa` vào để cài đặt bằng Apple ID miễn phí (7 ngày tự gia hạn).
+3. **Scarlet / ESign / KSign**: Cài trực tiếp trên iPhone qua chứng chỉ doanh nghiệp / chứng chỉ cá nhân P12.
+
