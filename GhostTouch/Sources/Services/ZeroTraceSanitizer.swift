@@ -38,7 +38,7 @@ class ZeroTraceSanitizer {
         case .cleanSlate:
             // Chế độ Xóa Trắng: Không nhúng bất kỳ metadata nào
             if case .jpeg(let quality) = format {
-                destinationProperties[kCGImageDestinationLossyFactor] = quality
+                destinationProperties[kCGImageDestinationLossyCompressionQuality] = quality
             }
             // Không truyền bất kỳ từ điển EXIF, TIFF, IPTC, XMP nào
             CGImageDestinationAddImage(destination, cgImage, destinationProperties as CFDictionary)
@@ -75,7 +75,7 @@ class ZeroTraceSanitizer {
             destinationProperties[kCGImagePropertyTIFFDictionary] = tiffDict
             destinationProperties[kCGImagePropertyExifDictionary] = exifDict
             if case .jpeg(let quality) = format {
-                destinationProperties[kCGImageDestinationLossyFactor] = quality
+                destinationProperties[kCGImageDestinationLossyCompressionQuality] = quality
             }
             
             CGImageDestinationAddImage(destination, cgImage, destinationProperties as CFDictionary)
@@ -84,7 +84,7 @@ class ZeroTraceSanitizer {
             // Giữ lại EXIF cũ nhưng lọc sạch các trường chỉnh sửa/AI
             var cleanProps = extractCleanedProperties(from: originalData)
             if case .jpeg(let quality) = format {
-                cleanProps[kCGImageDestinationLossyFactor as String] = quality
+                cleanProps[kCGImageDestinationLossyCompressionQuality as String] = quality
             }
             CGImageDestinationAddImage(destination, cgImage, cleanProps as CFDictionary)
         }

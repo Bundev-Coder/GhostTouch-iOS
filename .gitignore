@@ -12,3 +12,6 @@ build/
 *.xcarchive
 Payload/
 .env
+scripts/check_build.py
+scripts/get_log.py
+scripts/wait_build.py

@@ -26,12 +26,16 @@ class InpaintingEngine {
             let targetSource = sourceImage.resized(maxDimension: maxDim)
             let targetMask = maskImage.resized(maxDimension: maxDim)
             
-            guard var (sourcePixels, width, height) = targetSource.extractRGBAPixels(),
+            guard let extractedSource = targetSource.extractRGBAPixels(),
                   let (maskPixels, mWidth, mHeight) = targetMask.extractRGBAPixels(),
-                  width == mWidth, height == mHeight else {
+                  extractedSource.width == mWidth, extractedSource.height == mHeight else {
                 DispatchQueue.main.async { completion(nil) }
                 return
             }
+            
+            var sourcePixels = extractedSource.pixels
+            let width = extractedSource.width
+            let height = extractedSource.height
             
             switch mode {
             case .fastDiffusion:

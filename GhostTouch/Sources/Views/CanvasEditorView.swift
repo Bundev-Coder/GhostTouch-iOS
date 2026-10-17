@@ -27,7 +27,7 @@ struct CanvasEditorView: View {
     
     var body: some View {
         GeometryReader { geometry in
-            ZStack {
+            let canvas = ZStack {
                 // Lớp 1: Ảnh gốc hiển thị
                 Image(uiImage: sourceImage)
                     .resizable()
@@ -78,51 +78,54 @@ struct CanvasEditorView: View {
             }
             .scaleEffect(scale)
             .offset(offset)
-            .gesture(
-                isPanZoomEnabled ?
-                    // Chế độ Zoom & Di chuyển ảnh (2 ngón)
-                    AnyGesture(
-                        SimultaneousGesture(
-                            MagnificationGesture()
-                                .onChanged { value in
-                                    let delta = value / lastScale
-                                    lastScale = value
-                                    scale = min(max(scale * delta, 1.0), 6.0)
-                                }
-                                .onEnded { _ in lastScale = 1.0 },
-                            DragGesture()
-                                .onChanged { value in
-                                    offset = CGSize(
-                                        width: lastOffset.width + value.translation.width,
-                                        height: lastOffset.height + value.translation.height
-                                    )
-                                }
-                                .onEnded { _ in lastOffset = offset }
-                        )
-                    ) :
-                    // Chế độ Tô Cọ Tẩy (Brush Drawing)
-                    AnyGesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { value in
-                                touchLocation = value.location
-                                isTouching = true
-                                if currentStroke == nil {
-                                    currentStroke = MaskStroke(points: [value.location], lineWidth: brushSize)
-                                } else {
-                                    currentStroke?.points.append(value.location)
-                                }
-                            }
-                            .onEnded { _ in
-                                isTouching = false
-                                touchLocation = nil
-                                if let stroke = currentStroke {
-                                    strokes.append(stroke)
-                                    currentStroke = nil
-                                }
-                            }
-                    )
-            )
+            
+            if isPanZoomEnabled {
+                canvas.gesture(panZoomGesture)
+            } else {
+                canvas.gesture(drawingGesture)
+            }
         }
+    }
+    
+    private var panZoomGesture: some Gesture {
+        SimultaneousGesture(
+            MagnificationGesture()
+                .onChanged { value in
+                    let delta = value / lastScale
+                    lastScale = value
+                    scale = min(max(scale * delta, 1.0), 6.0)
+                }
+                .onEnded { _ in lastScale = 1.0 },
+            DragGesture()
+                .onChanged { value in
+                    offset = CGSize(
+                        width: lastOffset.width + value.translation.width,
+                        height: lastOffset.height + value.translation.height
+                    )
+                }
+                .onEnded { _ in lastOffset = offset }
+        )
+    }
+    
+    private var drawingGesture: some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                touchLocation = value.location
+                isTouching = true
+                if currentStroke == nil {
+                    currentStroke = MaskStroke(points: [value.location], lineWidth: brushSize)
+                } else {
+                    currentStroke?.points.append(value.location)
+                }
+            }
+            .onEnded { _ in
+                isTouching = false
+                touchLocation = nil
+                if let stroke = currentStroke {
+                    strokes.append(stroke)
+                    currentStroke = nil
+                }
+            }
     }
     
     /// Xuất ảnh Mask nhị phân đen-trắng tỉ lệ chuẩn với ảnh gốc để nạp vào InpaintingEngine

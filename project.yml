@@ -2,12 +2,12 @@ name: GhostTouch
 options:
   bundleIdPrefix: com.vinh9999hiih
   deploymentTarget:
-    iOS: "15.0"
+    iOS: "16.0"
 targets:
   GhostTouch:
     type: application
     platform: iOS
-    deploymentTarget: "15.0"
+    deploymentTarget: "16.0"
     sources:
       - path: GhostTouch
         excludes:

@@ -13,11 +13,15 @@ class SensorNoiseInjector {
         mask: UIImage,
         intensity: Float = 0.55
     ) -> UIImage {
-        guard var (pixels, width, height) = image.extractRGBAPixels(),
+        guard let extracted = image.extractRGBAPixels(),
               let (maskPixels, mWidth, mHeight) = mask.extractRGBAPixels(),
-              width == mWidth, height == mHeight else {
+              extracted.width == mWidth, extracted.height == mHeight else {
             return image
         }
+        
+        var pixels = extracted.pixels
+        let width = extracted.width
+        let height = extracted.height
         
         let bpp = 4
         let bpr = width * bpp
