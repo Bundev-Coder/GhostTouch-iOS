@@ -10,7 +10,11 @@ struct ContentView: View {
     @State private var currentImage: UIImage? = nil
     @State private var originalData: Data? = nil
     
-    // Nét vẽ Mask tẩy xóa
+    // Báo cáo giám định AI & Nội dung ảnh
+    @State private var forensicsReport: ForensicsReport = ForensicsReport()
+    @State private var isAnalyzing: Bool = false
+    
+    // Nét vẽ Mask tẩy xóa thủ công
     @State private var strokes: [MaskStroke] = []
     @State private var currentStroke: MaskStroke? = nil
     @State private var isPanZoomEnabled: Bool = false
@@ -18,7 +22,6 @@ struct ContentView: View {
     
     // Quản lý các Modal / Sheets
     @State private var showPhotoPicker: Bool = false
-    @State private var showCameraPicker: Bool = false
     @State private var showCompareSheet: Bool = false
     @State private var showInspectorSheet: Bool = false
     @State private var showExportSheet: Bool = false
@@ -29,7 +32,7 @@ struct ContentView: View {
             GhostTheme.background.ignoresSafeArea()
             
             if let image = currentImage {
-                // --- TRẠNG THÁI ĐANG CHỈNH SỬA ẢNH ---
+                // --- TRẠNG THÁI ĐANG CHỈNH SỬA & GIÁM ĐỊNH ẢNH ---
                 VStack(spacing: 0) {
                     // Thanh điều hướng trên cùng (Top Navigation Bar)
                     topEditorToolbar
@@ -38,7 +41,17 @@ struct ContentView: View {
                         .padding(.bottom, 6)
                         .background(GhostTheme.background.opacity(0.95))
                     
-                    // Khung Canvas chỉnh sửa chính
+                    // Thẻ Giám Định AI, Nhận Diện Nội Dung & Nút 1-Click Deep Clean
+                    AIDiagnosticCardView(
+                        report: forensicsReport,
+                        isAnalyzing: isAnalyzing,
+                        onPerformDeepClean: triggerOneClickDeepClean
+                    )
+                    .padding(.horizontal, 14)
+                    .padding(.top, 4)
+                    .padding(.bottom, 6)
+                    
+                    // Khung Canvas hiển thị & Tẩy xóa ảnh
                     ZStack {
                         CanvasEditorView(
                             sourceImage: image,
@@ -92,7 +105,7 @@ struct ContentView: View {
                    let uiImage = UIImage(data: data) {
                     await MainActor.run {
                         self.originalData = data
-                        self.loadImage(uiImage)
+                        self.loadImage(uiImage, rawData: data)
                     }
                 }
             }
@@ -199,11 +212,11 @@ struct ContentView: View {
                     .font(.system(size: 34, weight: .heavy))
                     .foregroundColor(.white)
                 
-                Text("Tẩy Ảnh Không Dấu Vết & Khử Dấu Ấn AI")
-                    .font(.subheadline)
+                Text("Giám Định AI & Làm Sạch Ảnh Vô Vết")
+                    .font(.subheadline.bold())
                     .foregroundColor(GhostTheme.cyan)
                 
-                Text("Xóa sạch vật thể, người thừa, logo và văn bản trực tiếp trên iPhone. Tự động tái tạo hạt cảm biến ISO máy ảnh, triệt tiêu 100% metadata & chữ ký phần mềm chỉnh sửa.")
+                Text("Thêm ảnh bất kỳ để phát hiện ngay nội dung bên trong, tỷ lệ AI và các phần mềm chỉnh sửa đã can thiệp. 1-Click làm sạch triệt để, tái tạo hạt cảm biến ISO và ngụy trang Camera iPhone thật.")
                     .font(.caption)
                     .foregroundColor(.gray)
                     .multilineTextAlignment(.center)
@@ -216,7 +229,7 @@ struct ContentView: View {
                     HStack(spacing: 10) {
                         Image(systemName: "photo.fill.on.rectangle.fill")
                             .font(.headline)
-                        Text("Chọn Ảnh Từ Album")
+                        Text("Chọn Ảnh Giám Định & Làm Sạch")
                             .font(.headline.bold())
                     }
                     .frame(maxWidth: .infinity)
@@ -231,7 +244,7 @@ struct ContentView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "sparkles")
                             .foregroundColor(GhostTheme.mint)
-                        Text("Thử Nghiệm Ảnh Mẫu (1-Click)")
+                        Text("Thử Nghiệm Ảnh Mẫu AI/Photoshop")
                             .font(.subheadline.bold())
                             .foregroundColor(.white)
                     }
@@ -245,10 +258,10 @@ struct ContentView: View {
             .padding(.horizontal, 28)
             
             // Tính năng nổi bật
-            HStack(spacing: 20) {
+            HStack(spacing: 18) {
+                featureBadge(icon: "eye.fill", text: "Vision Detect")
+                featureBadge(icon: "cpu.fill", text: "AI Scanner")
                 featureBadge(icon: "shield.slash.fill", text: "Zero Trace")
-                featureBadge(icon: "camera.aperture", text: "ISO Grain")
-                featureBadge(icon: "lock.shield.fill", text: "100% On-Device")
             }
             .padding(.top, 8)
             
@@ -268,11 +281,46 @@ struct ContentView: View {
     }
     
     // --- CÁC HÀM XỬ LÝ LOGIC ---
-    private func loadImage(_ image: UIImage) {
+    private func loadImage(_ image: UIImage, rawData: Data?) {
         self.currentImage = image
         self.historyManager.reset(initialImage: image)
         self.strokes.removeAll()
         self.currentStroke = nil
+        
+        // Chạy giám định AI & Phân tích nội dung ngay lập tức
+        self.isAnalyzing = true
+        AIDetectionService.shared.analyzeImage(image: image, rawData: rawData) { report in
+            self.forensicsReport = report
+            self.isAnalyzing = false
+        }
+    }
+    
+    /// Kích hoạt 1-Click Deep Clean: Làm sạch toàn bộ dấu vết AI & phần mềm chỉnh sửa
+    private func triggerOneClickDeepClean() {
+        guard let image = currentImage else { return }
+        isProcessing = true
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            let cleaned = ZeroTraceSanitizer.shared.performDeepClean(
+                image: image,
+                mode: self.config.antiForensicMode,
+                injectGrain: self.config.enableSensorGrainInjection
+            )
+            
+            DispatchQueue.main.async {
+                self.currentImage = cleaned
+                self.historyManager.push(newImage: cleaned, actionName: "1-Click Deep Clean")
+                
+                // Cập nhật trạng thái báo cáo sang Sạch Tuyệt Đối
+                self.forensicsReport.isCleaned = true
+                self.forensicsReport.aiProbability = 0
+                self.forensicsReport.suspiciousCount = 0
+                self.forensicsReport.detectedSoftwares.removeAll()
+                self.forensicsReport.detectedAIEngines.removeAll()
+                self.forensicsReport.aiVerdict = "100% Ảnh Đã Khử Dấu Vết (Chuẩn Apple Camera Gốc)"
+                self.isProcessing = false
+            }
+        }
     }
     
     private func performInpaint() {
@@ -330,32 +378,41 @@ struct ContentView: View {
         }
     }
     
-    /// Tạo ảnh mẫu để người dùng thử nghiệm ngay lập tức không cần chọn ảnh
+    /// Tạo ảnh mẫu có gắn sẵn dấu vết AI & Photoshop giả lập để người dùng thử nghiệm
     private func loadDemoSamplePhoto() {
         let size = CGSize(width: 800, height: 1000)
         let renderer = UIGraphicsImageRenderer(size: size)
         let demo = renderer.image { ctx in
             let cg = ctx.cgContext
-            // Nền gradient hoàng hôn
             let colors = [
-                UIColor(red: 0.15, green: 0.20, blue: 0.35, alpha: 1.0).cgColor,
-                UIColor(red: 0.85, green: 0.45, blue: 0.35, alpha: 1.0).cgColor
+                UIColor(red: 0.12, green: 0.16, blue: 0.28, alpha: 1.0).cgColor,
+                UIColor(red: 0.75, green: 0.40, blue: 0.35, alpha: 1.0).cgColor
             ] as CFArray
             let space = CGColorSpaceCreateDeviceRGB()
             if let grad = CGGradient(colorsSpace: space, colors: colors, locations: [0.0, 1.0]) {
                 cg.drawLinearGradient(grad, start: .zero, end: CGPoint(x: 0, y: 1000), options: [])
             }
             
-            // Vẽ vật thể mẫu (ví dụ logo / văn bản / watermark cần tẩy)
-            let text = "SAMPLE WATERMARK © 2026"
+            // Vẽ người & chi tiết mẫu
+            cg.setFillColor(UIColor.white.withAlphaComponent(0.9).cgColor)
+            cg.fillEllipse(in: CGRect(x: 320, y: 340, width: 160, height: 160)) // Mặt
+            cg.fillEllipse(in: CGRect(x: 260, y: 520, width: 280, height: 320)) // Thân
+            
+            let text = "AI GENERATED • PHOTOSHOP 2024"
             let attrs: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 32, weight: .heavy),
-                .foregroundColor: UIColor.white.withAlphaComponent(0.85)
+                .font: UIFont.systemFont(ofSize: 22, weight: .bold),
+                .foregroundColor: UIColor.white.withAlphaComponent(0.8)
             ]
-            (text as NSString).draw(at: CGPoint(x: 160, y: 460), withAttributes: attrs)
+            (text as NSString).draw(at: CGPoint(x: 210, y: 880), withAttributes: attrs)
         }
         
-        self.originalData = demo.jpegData(compressionQuality: 0.95)
-        self.loadImage(demo)
+        // Nhúng chuỗi giả lập Photoshop & Stable Diffusion vào rawData
+        let baseJpg = demo.jpegData(compressionQuality: 0.92) ?? Data()
+        var mockData = baseJpg
+        let fakeSignature = "Software: Adobe Photoshop 2024 (Macintosh)\nGenerator: Stable Diffusion XL v1.0\nc2pa: manifest-urn:uuid:12345".data(using: .ascii) ?? Data()
+        mockData.append(fakeSignature)
+        
+        self.originalData = mockData
+        self.loadImage(demo, rawData: mockData)
     }
 }

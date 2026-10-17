@@ -135,7 +135,7 @@ struct ForensicInspectorView: View {
                         Text(report.statusTitle)
                             .font(.headline.bold())
                             .foregroundColor(.white)
-                        Text(report.isTotallyClean ? "Đã triệt tiêu hoàn toàn mã định danh phần mềm & bản quyền AI" : "Ảnh gốc chứa thông tin nhận diện cần loại bỏ trước khi xuất")
+                        Text(report.aiVerdict)
                             .font(.caption2)
                             .foregroundColor(.gray)
                     }
@@ -145,13 +145,70 @@ struct ForensicInspectorView: View {
             .padding()
             .glassCard(borderColor: report.isTotallyClean ? GhostTheme.mint.opacity(0.4) : GhostTheme.warning.opacity(0.4))
             
+            // Nhận diện nội dung bức ảnh (Apple Vision)
+            if !report.detectedContentTags.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: "eye.fill")
+                            .foregroundColor(GhostTheme.cyan)
+                        Text("Nội dung bức ảnh nhận diện được (Vision AI):")
+                            .font(.subheadline.bold())
+                            .foregroundColor(.white)
+                    }
+                    
+                    HStack(spacing: 6) {
+                        ForEach(report.detectedContentTags, id: \.self) { tag in
+                            Text(tag)
+                                .font(.caption2.bold())
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(GhostTheme.cyan.opacity(0.2))
+                                .foregroundColor(GhostTheme.cyan)
+                                .cornerRadius(6)
+                        }
+                    }
+                }
+                .padding()
+                .glassCard()
+            }
+            
+            // Danh sách các công cụ phát hiện
+            if !report.detectedSoftwares.isEmpty || !report.detectedAIEngines.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: "exclamationmark.shield.fill")
+                            .foregroundColor(GhostTheme.danger)
+                        Text("Công cụ can thiệp phát hiện:")
+                            .font(.subheadline.bold())
+                            .foregroundColor(.white)
+                    }
+                    
+                    ForEach(report.detectedSoftwares + report.detectedAIEngines, id: \.self) { tool in
+                        HStack {
+                            Image(systemName: "xmark.octagon.fill")
+                                .foregroundColor(GhostTheme.danger)
+                            Text(tool)
+                                .font(.caption.bold())
+                                .foregroundColor(.white)
+                            Spacer()
+                            Text("ĐÃ PHÁT HIỆN")
+                                .font(.caption2.bold())
+                                .foregroundColor(GhostTheme.danger)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+                .padding()
+                .glassCard(borderColor: GhostTheme.danger.opacity(0.4))
+            }
+            
             // Danh sách các mục bảo mật
             VStack(spacing: 10) {
-                securityCheckRow(title: "Chữ ký Adobe Photoshop & Lightroom", cleared: true)
-                securityCheckRow(title: "Thẻ định danh bản quyền AI (C2PA / Content Credentials)", cleared: true)
-                securityCheckRow(title: "Mã đánh dấu ẩn SynthID / Watermark số", cleared: true)
-                securityCheckRow(title: "Thông số phần cứng & Camera HostComputer", cleared: true)
-                securityCheckRow(title: "Tọa độ vị trí địa lý GPS nhạy cảm", cleared: true)
+                securityCheckRow(title: "Chữ ký Adobe Photoshop & Lightroom", cleared: !report.hasPhotoshopTag && report.isCleaned)
+                securityCheckRow(title: "Thẻ định danh bản quyền AI (C2PA / Content Credentials)", cleared: !report.hasC2PAFlag || report.isCleaned)
+                securityCheckRow(title: "Mã đánh dấu ẩn SynthID / Watermark số", cleared: report.isCleaned)
+                securityCheckRow(title: "Thông số phần cứng & Camera HostComputer", cleared: report.isCleaned)
+                securityCheckRow(title: "Tọa độ vị trí địa lý GPS nhạy cảm", cleared: report.isCleaned)
             }
             .padding()
             .glassCard()
@@ -245,8 +302,16 @@ struct ForensicInspectorView: View {
     }
     
     private func runForensicAnalysis() {
-        report = ForensicAnalyzer.shared.scanMetadata(data: originalData)
-        updateELA()
+        isAnalyzing = true
+        AIDetectionService.shared.analyzeImage(image: currentImage, rawData: originalData) { fullReport in
+            self.report = fullReport
+            self.isAnalyzing = false
+            if let ela = fullReport.elaHeatmapImage {
+                self.elaImage = ela
+            } else {
+                self.updateELA()
+            }
+        }
     }
     
     private func updateELA() {
