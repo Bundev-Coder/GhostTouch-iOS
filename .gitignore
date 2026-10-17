@@ -1,0 +1,14 @@
+.DS_Store
+*.swp
+*~
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+DerivedData/
+build/
+.build/
+*.ipa
+*.zip
+*.xcarchive
+Payload/
+.env

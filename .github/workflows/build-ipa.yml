@@ -1,0 +1,103 @@
+name: Build iOS IPA (ARM64 Physical Device)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-ipa:
+    runs-on: macos-15
+    env:
+      CODE_SIGNING_ALLOWED: NO
+      CODE_SIGNING_REQUIRED: NO
+      CODE_SIGN_IDENTITY: ""
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Select Latest Xcode & Swift Environment
+        run: |
+          LATEST_XCODE=$(ls -d /Applications/Xcode_2*.app /Applications/Xcode_16*.app /Applications/Xcode*.app 2>/dev/null | sort -V | tail -n 1)
+          if [ -n "$LATEST_XCODE" ]; then
+            echo "Selecting Xcode: $LATEST_XCODE"
+            sudo xcode-select -s "$LATEST_XCODE/Contents/Developer"
+          fi
+          xcodebuild -version
+          swift --version
+          echo "iOS SDK Path: $(xcrun --show-sdk-path --sdk iphoneos)"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Apply Swift compatibility patch
+        run: python3 ./scripts/patch_package.py
+
+      - name: Generate Xcode Project
+        run: xcodegen generate
+
+      - name: Build and Archive ARM64 Device .app
+        run: |
+          xcodebuild \
+            -scheme GhostTouch \
+            -project GhostTouch.xcodeproj \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "${{ runner.temp }}/GhostTouch.xcarchive" \
+            archive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Sign App Bundle (Ad-hoc)
+        run: |
+          APP_PATH=$(find "${{ runner.temp }}/GhostTouch.xcarchive/Products/Applications" -name "*.app" -maxdepth 1 | head -n 1)
+          echo "Found app bundle at: $APP_PATH"
+          codesign -s - --force --deep "$APP_PATH"
+
+      - name: Create Payload and Pack IPA
+        run: |
+          mkdir -p "${{ runner.temp }}/Payload"
+          APP_PATH=$(find "${{ runner.temp }}/GhostTouch.xcarchive/Products/Applications" -name "*.app" -maxdepth 1 | head -n 1)
+          echo "Found app bundle at: $APP_PATH"
+          cp -R "$APP_PATH" "${{ runner.temp }}/Payload/"
+          cd "${{ runner.temp }}"
+          zip -r -9 GhostTouch-ZeroTrace.ipa Payload
+          ls -lh GhostTouch-ZeroTrace.ipa
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GhostTouch-ZeroTrace.ipa
+          path: ${{ runner.temp }}/GhostTouch-ZeroTrace.ipa
+          retention-days: 7
+
+      - name: Create GitHub Release (Direct IPA Download)
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: "GhostTouch iOS v1.0 (Build ${{ github.run_number }})"
+          body: |
+            ### 👻 GhostTouch - Zero-Trace Photo Eraser & AI Artifact Wiper
+            **Native iOS (SwiftUI) cho iPhone thật (ARM64 Physical Device)**
+
+            - 🧹 **Tẩy vật thể thông minh (Smart Eraser)**: Xóa người lạ, vật thể, logo, văn bản, watermark mượt mà trực tiếp trên thiết bị (On-Device GPU CoreImage / Accelerate).
+            - 🛡️ **Zero-Trace Sanitizer**: Tước bỏ 100% EXIF, IPTC, XMP, C2PA Content Credentials, Photoshop History, thẻ định danh AI (SynthID, Firefly, Midjourney markers).
+            - 🔬 **Tái tạo hạt cảm biến máy ảnh (Sensor Grain Synthesizer)**: Khử triệt để hiện tượng bết da/láng mịn bất thường, hòa lẫn tự nhiên với độ nhiễu ISO quang học của ảnh gốc.
+            - 📸 **Camera Camouflage (Ngụy trang ảnh gốc Apple)**: Tùy chọn giả lập thông số máy ảnh gốc iPhone (iPhone 15 Pro, f/1.78, ISO 50) khiến ảnh trông như vừa chụp trực tiếp từ Camera, không có dấu vết phần mềm thứ 3.
+            - 🔍 **Error Level Analysis (ELA) Inspector**: Tích hợp sẵn bộ soi mức nén để bạn tự kiểm chứng độ "tàng hình" trước khi lưu ảnh.
+            - 📲 **Cài đặt tiện lợi**: Sẵn sàng nạp trực tiếp qua Sideloadly, AltStore, TrollStore, Scarlet, ESign.
+          files: ${{ runner.temp }}/GhostTouch-ZeroTrace.ipa
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

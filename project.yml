@@ -1,0 +1,38 @@
+name: GhostTouch
+options:
+  bundleIdPrefix: com.vinh9999hiih
+  deploymentTarget:
+    iOS: "15.0"
+targets:
+  GhostTouch:
+    type: application
+    platform: iOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: GhostTouch
+        excludes:
+          - "GhostTouch.entitlements"
+          - "Info.plist"
+    info:
+      path: GhostTouch/Info.plist
+      properties:
+        CFBundleDisplayName: "GhostTouch"
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        UILaunchScreen: {}
+    entitlements:
+      path: GhostTouch/GhostTouch.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.vinh9999hiih.GhostTouch
+        PRODUCT_NAME: GhostTouch
+        CODE_SIGNING_ALLOWED: "NO"
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGN_IDENTITY: ""
+        ENABLE_BITCODE: "NO"
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: "NO"
+        INFOPLIST_FILE: GhostTouch/Info.plist
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: "YES"
