@@ -86,8 +86,8 @@ Dự án được cấu hình sẵn **GitHub Actions CI/CD** chạy trên máy c
 
 File `.ipa` đã được biên dịch thành công chuẩn kiến trúc **ARM64 Physical Device** (không bị văng app trên iPhone thật):
 
-- 📦 **Tệp tin cục bộ trên máy tính:** [GhostTouch-ZeroTrace.ipa](file:///c:/Users/ad/Documents/GhostTouch_iOS/GhostTouch-ZeroTrace.ipa) (`5.5 MB`)
-- 🌐 **Link tải trực tiếp GitHub Release:** [Tải GhostTouch-ZeroTrace.ipa (v1.0.2)](https://github.com/Bundev-Coder/GhostTouch-iOS/releases/download/v1.0.2/GhostTouch-ZeroTrace.ipa)
+- 📦 **Tệp tin cục bộ trên máy tính:** [GhostTouch-ZeroTrace.ipa](file:///c:/Users/ad/Documents/GhostTouch_iOS/GhostTouch-ZeroTrace.ipa) (`5.8 MB`)
+- 🌐 **Link tải trực tiếp GitHub Release:** [Tải GhostTouch-ZeroTrace.ipa (v1.0.4)](https://github.com/Bundev-Coder/GhostTouch-iOS/releases/download/v1.0.4/GhostTouch-ZeroTrace.ipa)
 - 📌 **Trang phát hành chính thức:** [GhostTouch iOS Releases](https://github.com/Bundev-Coder/GhostTouch-iOS/releases)
 
 ### Các hình thức cài đặt:
